@@ -5,8 +5,8 @@ const storage = multer.diskStorage({
     cb(null, "./public/temp"); //location where file will be stored.
   },
   filename: function (req, file, cb) {
-    cb(null, file.fieldname);
+    cb(null, file.originalname);
   },
 });
 
-export const upload = multer({ storage: storage });
+export const upload = multer({ storage });
