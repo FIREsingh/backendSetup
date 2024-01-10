@@ -41,7 +41,14 @@ const registerUser = asyncHandler(async (req, res) => {
   //4. check for image
   //5. check for avatar
   const avatarLocalPath = await req.files?.avatar[0]?.path;
-  const coverImageLocalPath = await req.files?.coverImage[0]?.path;
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = await req.files.coverImage[0].path;
+  }
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
   }
@@ -60,13 +67,13 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     fullname,
     avatar: avatar.url,
-    coverImage: coverImage?.path || "",
+    coverImage: coverImage?.url,
   });
 
   //9. check for user creation (created or not) and
   //8. remove password and refresh token field from response.
   const createdUser = await User.findById(user._id).select(
-    "-password, -refreshToken"
+    "-password -refreshToken"
   );
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
