@@ -90,9 +90,12 @@ const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
     const accessToken = await user.generateAuthToken();
+    console.log("entered");
+
     const refreshToken = await user.generateRefreshToken();
-    user.refreshToken = refreshToken;
+    console.log("out");
     user.save({ validateBeforeSave: false }); //coz mongoose model kick in
+    user.refreshToken = refreshToken;
     return { accessToken, refreshToken };
   } catch (err) {
     throw new ApiError(
@@ -114,12 +117,13 @@ const loginUser = asyncHandler(async (req, res) => {
   //================================================================
 
   //1. get data from req body
-  const { email, username, password } = req.body;
+  const { username, email, password } = req.body;
 
   //2. validation
   if (!username || !email || !password) {
     throw new ApiError(400, "Please fill all the fields");
   }
+
   //3. check if user exists
   const user = await User.findOne({
     $or: [{ username }, { email }],
@@ -170,8 +174,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1, // this removes the field from document
       },
     },
     {
