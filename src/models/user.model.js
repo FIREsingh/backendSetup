@@ -52,6 +52,7 @@ const userSchema = new Schema(
 );
 
 //encryption(Encrypt the password and save it)
+//.pre show that this middleware will run as we "save" the process.
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);

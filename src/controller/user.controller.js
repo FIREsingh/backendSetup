@@ -86,7 +86,7 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, createdUser, "User created successfully"));
 });
 
-//================== generateAccessAndRefreshToken ===============
+//================== generateAccessAndRefreshToken =================
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -105,7 +105,8 @@ const generateAccessAndRefreshToken = async (userId) => {
     );
   }
 };
-//=================== LoginUser Controller ========================
+
+//=================== LoginUser Controller =========================
 const loginUser = asyncHandler(async (req, res) => {
   //================================================================
   //1. get data from req body
@@ -166,7 +167,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-//=================== LogoutUser Controller ========================
+//=================== LogoutUser Controller =========================
 const logoutUser = asyncHandler(async (req, res) => {
   //================================================================
   // use middleware to access user.
@@ -193,6 +194,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "user logged out successfully"));
 });
+
 //=================== refreshAccessToken Controller =================
 const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
@@ -239,4 +241,129 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser };
+//=================== changeCurrentPassword Controller ==============
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  //================================================================
+  // use middleware to access user.
+  //================================================================
+  const { oldPassword, newPassword, confPassword } = req.body;
+  const user = await User.findById(req.user?._id);
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!(confPassword === newPassword)) {
+    throw new ApiError(400, "Passwords do not match");
+  }
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid old password");
+  }
+  user.password = newPassword;
+  user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+//=================== getCurrentUser Controller =====================
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(200, req.body, "Current User fetched successfully");
+});
+
+//***** update text based data *****
+//=================== updateAccountDetails Controller ===============
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  //================================================================
+  // use middleware to access user.
+  //================================================================
+
+  //get data
+  const { fullname, email } = req.body;
+
+  //validation
+  if (!fullname || !email) {
+    throw new ApiError(400, "Please fill all the fields");
+  }
+
+  const user = User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullname,
+        email,
+      },
+    },
+    { new: true } //retuen after the update
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Account details updated successfully"));
+});
+
+//***** update file based data *****
+//=================== updateUserAvatar Controller ===============
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  //.files come from multer
+  const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+  //upload on cloudinary
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while uploading avatar");
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar updated successfully"));
+});
+//=================== updateUserCoverImage Controller ===============
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  //.files come from multer
+  const coverImageLocalPath = req.file?.path;
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "cover file is missing");
+  }
+  //upload on cloudinary
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (!coverImage.url) {
+    throw new ApiError(400, "Error while uploading cover image");
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "cover Image updated successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};
